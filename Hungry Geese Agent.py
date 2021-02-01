@@ -1,6 +1,15 @@
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 
-#Please just work
+#11 columns of 7 rows, can move from 1st column to 11th column and 1st row to 7th row.
+#Minimum of 2 food units on board at all times.
+#Every 40 steps goose loses segment.
+#The reward is calculated as the current turn + goose length.
+#Surviving agents at the end of the episode receive maximum reward as (2 * episode steps) + length.
+#200 steps each turn.
+#Surviving agents receive maximum reward 2∗configuration.episodeSteps.
+
+#Don't know who survives in head on collisions?
+
 
 def agent(obs_dict, config_dict):
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
