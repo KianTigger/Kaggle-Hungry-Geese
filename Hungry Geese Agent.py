@@ -8,10 +8,17 @@ from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Conf
 #200 steps each turn.
 #Surviving agents receive maximum reward 2∗configuration.episodeSteps.
 
-#Don't know who survives in head on collisions?
+#They both die, but the shorter one dies first. If it's down to the last two geese and your's is longer, 
+# a head-on collision will end the game with you in first place.
+#Not sure if this helps too much
+
+
+#Need to think of a good way to incorporate last move for our goose and others geese as it's important in determining smallest steps to get to food etc.
+
 
 numCols = 11
 numRows = 7
+Matrix = [[0 for numCols in range(numCols)] for numRows in range(numRows)]
 
 def agent(obs_dict, config_dict):
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
@@ -31,6 +38,42 @@ def agent(obs_dict, config_dict):
     if food_column > player_column:
         return Action.EAST.name
     return Action.WEST.name
+
+def fill_matrix(observation, configuration):
+    #0 = empty space
+    #1 = player head
+    #2 = player body
+    #3 = generic goose head
+    #4 = generic goose body
+    #5 = food
+    foodPosition = 5
+    player_index = observation.index
+    for i in range(len(observation.geese)):
+        #Checks if for our goose or generic goose
+        if i == player_index:
+            bodyPart = 2
+            headPart = 1
+        else:
+            bodyPart = 4
+            headPart = 3
+        player_goose = observation.geese[i]
+        #for each body part
+        for j in range(len(player_goose)):
+            player_part = player_goose[j]
+            player_row, player_column = row_col(player_part, configuration.columns)
+            if j == 0:
+                Matrix[player_row][player_column] = headPart
+            else:
+                Matrix[player_row][player_column] = bodyPart
+
+    #Food placement
+    for i in range(len(observation.food)):
+        tempfood = observation.food[i]
+        tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
+        Matrix[tempfood_row][tempfood_column] = foodPosition
+    
+
+
 
 def agent2(obs_dict, config_dict):
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
