@@ -1,5 +1,7 @@
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 
+#Please just work
+
 def agent(obs_dict, config_dict):
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
     observation = Observation(obs_dict)
