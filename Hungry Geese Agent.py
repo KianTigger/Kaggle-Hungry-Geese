@@ -17,6 +17,19 @@ import numpy as np
 #Need to think of a good way to incorporate last move for our goose and others geese as it's important in determining smallest steps to get to food etc.
 
 
+## TO DO LIST ##
+
+#take into account distance other geese have to travel using a* algorithm
+
+#check open spaces around food before distance to see if it is viable ( to stop getting trapped as easily)
+
+#If no suitable food available, a* to our tail, will need to create a matrix without our tail in it, should be relatively trivial.
+
+
+
+
+
+
 numCols = 11
 numRows = 7
 Matrix = [[0 for x in range(numCols)] for y in range(numRows)]
