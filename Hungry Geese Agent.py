@@ -3,6 +3,11 @@ from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Conf
 import numpy as np
 import time
 
+#BENNNNNN
+
+
+
+
 #11 columns of 7 rows, can move from 1st column to 11th column and 1st row to 7th row.
 #Minimum of 2 food units on board at all times.
 #Every 40 steps goose loses segment.
