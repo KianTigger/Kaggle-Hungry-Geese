@@ -1,4 +1,4 @@
-#%%writefile submission.py
+%%writefile submission.py
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 import numpy as np
 import time
@@ -115,9 +115,6 @@ def fill_matrix(observation, configuration):
     
     return Matrix, MatrixNoFood
     
-
-
-
 
 
 def which_food(observation, configuration, player_row, player_column):
@@ -335,7 +332,7 @@ def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
     
     bestFood = 0
     bestFoodDistance = numCols + numRows
-    bestPath = [(3, 5), (3, 6)]
+    bestPath = "no path"
 
     for i in range(len(observation.food)):
         f = open("./myfile1.txt", "a")
@@ -350,7 +347,17 @@ def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
         tempCol = (end[1] + shift[1]) % numCols
         end = (tempRow, tempCol)
         
-        path = astar(MatrixNoFood, start, end)
+        filledspaces = 0
+        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            node_position = ((end[0] + new_position[0])%6, (end[1] + new_position[1])%10)
+            if MatrixNoFood[node_position[0]][node_position[0]] != 0:
+                if MatrixNoFood[node_position[0]][node_position[0]] == 4:
+                    filledspaces += 7
+                filledspaces += 1
+        if filledspaces <= 1:
+            path = astar(MatrixNoFood, start, end)
+        else:
+            path = "no result"
         if path == "no result":
             return "no path"
         
@@ -428,5 +435,3 @@ def agent(obs_dict, config_dict):
     f.write(" which took " + str(t1) + " seconds")
     f.close()
     return whichMove
-
-    #return whichMove
