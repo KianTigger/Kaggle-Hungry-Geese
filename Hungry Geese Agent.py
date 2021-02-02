@@ -355,7 +355,7 @@ def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
     
     #Could also implement escape route algorithm? Don't know how that would work, ask ben
 
-    return path
+    return bestPath
             
 def agent(obs_dict, config_dict):
     
