@@ -1,4 +1,4 @@
-%%writefile submission.py
+#%%writefile submission.py
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 import numpy as np
 import time
@@ -147,11 +147,19 @@ def which_food(observation, configuration, player_row, player_column):
 
 
 def which_direction(path):
-    #return Action.WEST.name
+    f = open("./myfile1.txt", "a")
+    f.write("\n")
+    f.write("Path passed to which_direction: " + str(path) + "\n")
+    f.write("Type of path: " + str(type(path)) + "\n")
+    
+    if type(path) != list:
+        f.write("SOMETHING WENT WRONG AND PATH GOT PASSED THROUGH EVEN THOUGH IT WAS STRING")
+        return Action.NORTH.name
+    
     movement = [0, 0]
     movement[0] = path[0][0] - path[1][0]
     movement[1] = path[0][1] - path[1][1]
-    f = open("./myfile1.txt", "a")
+    
     f.write("movement chosen")
     f.write(str(movement) + "\n"  + "\n")
     if movement == [1, 0]:
@@ -259,7 +267,7 @@ def astar(maze, start, end):
     count = 0
     while len(open_list) > 0:
         if count >= 15:
-            return "no result"
+            return "no path"
         count += 1
         f.write("Count: " + str(count) + ", Open_list[0]: " + str(open_list[0]))
         f.write("\n")
@@ -417,7 +425,7 @@ def agent(obs_dict, config_dict):
     
     f.write("Path: " + str(path) + "\n")
     
-    if path == "no path":
+    if type(path) != list:
         player_end = player_goose[len(player_goose)-1]
         player_end_row, player_end_column = row_col(player_end, configuration.columns)
         if start == (player_end_row, player_end_column):
