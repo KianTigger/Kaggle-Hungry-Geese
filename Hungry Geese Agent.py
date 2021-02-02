@@ -1,5 +1,7 @@
+#%%writefile submission.py
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 import numpy as np
+import time
 
 #11 columns of 7 rows, can move from 1st column to 11th column and 1st row to 7th row.
 #Minimum of 2 food units on board at all times.
@@ -26,9 +28,11 @@ import numpy as np
 #If no suitable food available, a* to our tail, will need to create a matrix without our tail in it, should be relatively trivial.
 
 
+#overwrites file information
+#f = open("./myfile1.txt", "w+")
+#f.close()
 
-
-
+which_turn = 0
 
 numCols = 11
 numRows = 7
@@ -53,34 +57,6 @@ def agent_ORIGINAL(obs_dict, config_dict):
     if food_column > player_column:
         return Action.EAST.name
     return Action.WEST.name
-
-
-
-
-
-def agent(obs_dict, config_dict):
-    """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
-    observation = Observation(obs_dict)
-    configuration = Configuration(config_dict)
-
-    Matrix, MatrixNoFood = fill_matrix(observation, configuration)
-
-    player_index = observation.index
-    player_goose = observation.geese[player_index]
-    #player_goose is list of all bodypart positions
-    player_head = player_goose[0]
-    player_row, player_column = row_col(player_head, configuration.columns)
-    start = (player_row, player_column)
-    
-    MatrixNoFood, start, shift = shift_matrix(MatrixNoFood, start)
-    
-
-    #will replace player_row, player_column with 2d array that has all positions filled with all player information
-    path = path_to_closest_food(observation, configuration, start, shift)
-    
-    return which_direction(path)
-
-
 
 def fill_matrix(observation, configuration):
     #0 = empty space
@@ -151,7 +127,7 @@ def which_food(observation, configuration, player_row, player_column):
             minCols = tempColDist
             minSum = i
 
-    food = observation.foor[minSum]
+    food = observation.food[minSum]
     food_row, food_column = row_col(food, configuration.columns)
 
     #This will need to be changed, food distance depends on direction snake just traveled, whether other geese are close (as it could be pointless) and which spots on the board are filled
@@ -169,6 +145,8 @@ def path_to_closest_food(observation, configuration, start, shift):
     bestPath = []
 
     for i in range(len(observation.food)):
+        #f = open("./myfile1.txt", "a")
+        #f.write("iteration of path to closest food: " + str(i))
         tempfood = observation.food[i]
         
         tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
@@ -187,7 +165,7 @@ def path_to_closest_food(observation, configuration, start, shift):
         tempCol = (bestPath[j][1] - shift[1]) % numCols
         bestPath[j] = (tempRow, tempCol)
 
-    food = observation.foor[bestFood]
+    food = observation.food[bestFood]
     food_row, food_column = row_col(food, configuration.columns)
 
     #This will need to be changed, food distance depends on direction snake just traveled, whether other geese are close (as it could be pointless) and which spots on the board are filled
@@ -199,9 +177,11 @@ def path_to_closest_food(observation, configuration, start, shift):
 
 
 def which_direction(path):
-    movement = []
-    movement[0] = path[1][0] - path[2][0]
-    movement[1] = path[1][1] - path[2][1]
+    return Action.WEST.name
+    movement = [0, 0]
+    movement[0] = path[0][0] - path[1][0]
+    movement[1] = path[0][1] - path[1][1]
+    return movement
 
     if movement == [1, 0]:
         return Action.SOUTH.name
@@ -340,3 +320,44 @@ def astar(maze, start, end):
 
             # Add the child to the open list
             open_list.append(child)
+
+def agent(obs_dict, config_dict):
+    
+    global which_turn
+    which_turn += 1
+    #t0= time.clock()
+    #f = open("./myfile1.txt", "a")
+
+    #f.write("\n")
+    """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
+    observation = Observation(obs_dict)
+    configuration = Configuration(config_dict)
+
+    Matrix, MatrixNoFood = fill_matrix(observation, configuration)
+    
+    
+    player_index = observation.index
+    player_goose = observation.geese[player_index]
+    #player_goose is list of all bodypart positions
+    player_head = player_goose[0]
+    player_row, player_column = row_col(player_head, configuration.columns)
+    start = (player_row, player_column)
+    
+    MatrixNoFood, start, shift = shift_matrix(MatrixNoFood, start)
+    
+    return Action.WEST.name
+    #will replace player_row, player_column with 2d array that has all positions filled with all player information
+    path = path_to_closest_food(observation, configuration, start, shift)
+    #path = astar(MatrixNoFood, start, end)
+    
+    
+    whichMove =  which_direction(path)
+    
+    #t1 = time.clock() - t0
+    #f.write("This is turn: " + str(int(which_turn)) + " , chosen movement: " )
+    #f.write(str(whichMove))
+    #f.write(" which took " + str(t1) + " seconds")
+    #f.close()
+    return Action.WEST.name
+
+    #return whichMove
