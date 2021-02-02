@@ -155,10 +155,13 @@ def which_direction(path):
     if type(path) != list:
         f.write("SOMETHING WENT WRONG AND PATH GOT PASSED THROUGH EVEN THOUGH IT WAS STRING")
         return Action.NORTH.name
-    
-    movement = [0, 0]
-    movement[0] = path[0][0] - path[1][0]
-    movement[1] = path[0][1] - path[1][1]
+    try:
+        movement = [0, 0]
+        movement[0] = path[0][0] - path[1][0]
+        movement[1] = path[0][1] - path[1][1]
+    except IndexError:
+        return Action.NORTH.name
+        
     
     f.write("movement chosen")
     f.write(str(movement) + "\n"  + "\n")
