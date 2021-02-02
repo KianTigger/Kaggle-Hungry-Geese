@@ -30,33 +30,21 @@ import time
 
 #overwrites file information
 #f = open("./myfile1.txt", "w+")
+#f.write("Starting program")
+#f.write("\n")
 #f.close()
 
-which_turn = 0
+#f = open("./myfile2.txt", "w+")
+#f.write("Starting program")
+#f.write("\n")
+#f.close()
+
+#which_turn = 0
 
 numCols = 11
 numRows = 7
 Matrix = [[0 for x in range(numCols)] for y in range(numRows)]
 MatrixNoFood = [[0 for x in range(numCols)] for y in range(numRows)]
-
-def agent_ORIGINAL(obs_dict, config_dict):
-    """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
-    observation = Observation(obs_dict)
-    configuration = Configuration(config_dict)
-    player_index = observation.index
-    player_goose = observation.geese[player_index]
-    player_head = player_goose[0]
-    player_row, player_column = row_col(player_head, configuration.columns)
-    food = observation.food[0]
-    food_row, food_column = row_col(food, configuration.columns)
-
-    if food_row > player_row:
-        return Action.SOUTH.name
-    if food_row < player_row:
-        return Action.NORTH.name
-    if food_column > player_column:
-        return Action.EAST.name
-    return Action.WEST.name
 
 def fill_matrix(observation, configuration):
     #0 = empty space
@@ -67,11 +55,14 @@ def fill_matrix(observation, configuration):
     #5 = generic goose body
     #6 = generic goose end
     #7 = food
+    Matrix = [[0 for x in range(numCols)] for y in range(numRows)]
+    MatrixNoFood = [[0 for x in range(numCols)] for y in range(numRows)]
+
     foodPosition = 7
     player_index = observation.index
 
     #might want to replace non empty spots with an array or tuple (to indicate what it is and what body position to track all parts of goose neck.)
-
+    
     for i in range(len(observation.geese)):
         #Checks if for our goose or generic goose
         if i == player_index:
@@ -130,58 +121,30 @@ def which_food(observation, configuration, player_row, player_column):
     food = observation.food[minSum]
     food_row, food_column = row_col(food, configuration.columns)
 
-    #This will need to be changed, food distance depends on direction snake just traveled, whether other geese are close (as it could be pointless) and which spots on the board are filled
-    #Will implement a map solving algorithm for all alive geese and if our goose has shortest distance, will select food that way.
-    
-    #Could also implement escape route algorithm? Don't know how that would work, ask ben
-
     return food, food_row, food_column
 
-def path_to_closest_food(observation, configuration, start, shift):
-    #instead of using obeservation.food[0] should find out which food has shortest route from head.
-    
-    bestFood = 0
-    bestFoodDistance = numCols + numRows
-    bestPath = []
-
-    for i in range(len(observation.food)):
-        #f = open("./myfile1.txt", "a")
-        #f.write("iteration of path to closest food: " + str(i))
-        tempfood = observation.food[i]
-        
-        tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
-        end = (tempfood_row, tempfood_column)
-        tempRow = int((end[0] + shift[0]) % numRows)
-        tempCol = (end[1] + shift[1]) % numCols
-        end = (tempRow, tempCol)
-        path = astar(MatrixNoFood, start, end)
-        if (len(path)) < bestFoodDistance:
-            bestFood = i
-            bestFoodDistance = len(path)
-            bestPath = path
-
-    for j in range(len(bestPath)):
-        tempRow = int((bestPath[j][0] - shift[0]) % numRows)
-        tempCol = (bestPath[j][1] - shift[1]) % numCols
-        bestPath[j] = (tempRow, tempCol)
-
-    food = observation.food[bestFood]
-    food_row, food_column = row_col(food, configuration.columns)
-
     #This will need to be changed, food distance depends on direction snake just traveled, whether other geese are close (as it could be pointless) and which spots on the board are filled
     #Will implement a map solving algorithm for all alive geese and if our goose has shortest distance, will select food that way.
     
     #Could also implement escape route algorithm? Don't know how that would work, ask ben
 
-    return path
+    
+
 
 
 def which_direction(path):
-    return Action.WEST.name
     movement = [0, 0]
     movement[0] = path[0][0] - path[1][0]
     movement[1] = path[0][1] - path[1][1]
-    return movement
+    
+    if movement == [1, 0]:
+        return Action.NORTH.name
+    elif movement == [-1, 0]:
+        return Action.SOUTH.name
+    elif movement == [0, 1]:
+        return Action.WEST.name
+    elif movement == [0, -1]:
+        return Action.EAST.name
 
     if movement == [1, 0]:
         return Action.SOUTH.name
@@ -214,14 +177,19 @@ def shift_matrix(TempMatrix, start):
         for j in range(numRows-1):
             TempMatrix[j] = TempMatrix[j+1]
         TempMatrix[numRows-1] = tempRow
-
-    TempMatrix = np.roll(TempMatrix, stepsRight)
+    
+    for j in range(len(TempMatrix)):
+        TempMatrix[j] = np.roll(TempMatrix[j], stepsRight)
 
     newStart = (3, 5)
 
     shift = [newStart[0]-start[0],newStart[1]-start[1]]
 
     return TempMatrix, newStart, shift
+
+
+
+
             
 
 class Node():
@@ -241,7 +209,11 @@ class Node():
 
 def astar(maze, start, end):
     """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-
+    #f = open("./myfile1.txt", "a")
+    #f.write("\n")
+    #f.write("\n")
+    #f.write("STARTING aSTAR ALGORITHM")
+    #f.write("\n")
     # Create start and end node
     start_node = Node(None, start)
     start_node.g = start_node.h = start_node.f = 0
@@ -255,8 +227,22 @@ def astar(maze, start, end):
     # Add the start node
     open_list.append(start_node)
 
+    #np.savetxt('./myfile1.txt', maze, fmt='%s')
+    #with open("./myfile2.txt", 'a') as e:
+    #    np.savetxt(e, maze,  fmt='%1.3f', newline=", ")
+    #with open('./myfile2.txt', 'a') as testfile:
+    #    testfile.write("\n")
+    #    for row in maze:
+    #        testfile.write(' '.join([str(a) for a in row]) + '\n')
+    
     # Loop until you find the end
+    count = 0
     while len(open_list) > 0:
+        if count >= 15:
+            return "no result"
+        count += 1
+        #f.write("Count: " + str(count) + ", Open_list[0]: " + str(open_list[0]))
+        #f.write("\n")
 
         # Get the current node
         current_node = open_list[0]
@@ -321,20 +307,66 @@ def astar(maze, start, end):
             # Add the child to the open list
             open_list.append(child)
 
+def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift):
+    #instead of using obeservation.food[0] should find out which food has shortest route from head.
+    
+    bestFood = 0
+    bestFoodDistance = numCols + numRows
+    bestPath = []
+
+    for i in range(len(observation.food)):
+        #f = open("./myfile1.txt", "a")
+        #f.write(str(observation.food) + " <-- num foods, ")
+        #f.write("iteration of path to closest food: " + str(i))
+        #f.write("\n")
+        tempfood = observation.food[i]
+        
+        tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
+        end = (tempfood_row, tempfood_column)
+        tempRow = int((end[0] + shift[0]) % numRows)
+        tempCol = (end[1] + shift[1]) % numCols
+        end = (tempRow, tempCol)
+        
+        path = astar(MatrixNoFood, start, end)
+        if path == "no result":
+            return "no path"
+        
+        if (len(path)) < bestFoodDistance:
+            bestFood = i
+            bestFoodDistance = len(path)
+            bestPath = path
+    
+    for j in range(len(bestPath)):
+        tempRow = int((bestPath[j][0] - shift[0]) % numRows)
+        tempCol = (bestPath[j][1] - shift[1]) % numCols
+        bestPath[j] = (tempRow, tempCol)
+
+    food = observation.food[bestFood]
+    food_row, food_column = row_col(food, configuration.columns)
+
+    #This will need to be changed, food distance depends on direction snake just traveled, whether other geese are close (as it could be pointless) and which spots on the board are filled
+    #Will implement a map solving algorithm for all alive geese and if our goose has shortest distance, will select food that way.
+    
+    #Could also implement escape route algorithm? Don't know how that would work, ask ben
+
+    return path
+            
 def agent(obs_dict, config_dict):
     
     global which_turn
     which_turn += 1
-    #t0= time.clock()
+    t0= time.clock()
     #f = open("./myfile1.txt", "a")
 
     #f.write("\n")
+    #f.write("Starting file" + "\n")
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
     observation = Observation(obs_dict)
     configuration = Configuration(config_dict)
 
     Matrix, MatrixNoFood = fill_matrix(observation, configuration)
     
+    #f.write("Matrix filled" + "\n")
     
     player_index = observation.index
     player_goose = observation.geese[player_index]
@@ -344,20 +376,27 @@ def agent(obs_dict, config_dict):
     start = (player_row, player_column)
     
     MatrixNoFood, start, shift = shift_matrix(MatrixNoFood, start)
+   # f.write("Matrix shifted" + "\n")
+
     
-    return Action.WEST.name
+    
     #will replace player_row, player_column with 2d array that has all positions filled with all player information
-    path = path_to_closest_food(observation, configuration, start, shift)
-    #path = astar(MatrixNoFood, start, end)
-    
-    
+    path = path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
+    if path == "no path":
+        player_end = player_goose[len(player_goose)-1]
+        player_end_row, player_end_column = row_col(player_end, configuration.columns)
+        path = astar(MatrixNoFood, start, (player_end_row, player_end_column))
+        #f = open("./myfile1.txt", "a")
+        #f.write("Endless loop" + "\n")
+        
+        
     whichMove =  which_direction(path)
     
-    #t1 = time.clock() - t0
+    t1 = time.clock() - t0
     #f.write("This is turn: " + str(int(which_turn)) + " , chosen movement: " )
     #f.write(str(whichMove))
     #f.write(" which took " + str(t1) + " seconds")
     #f.close()
-    return Action.WEST.name
+    return whichMove
 
     #return whichMove
