@@ -350,21 +350,20 @@ def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
         filledspaces = 0
         for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             node_position = ((end[0] + new_position[0])%6, (end[1] + new_position[1])%10)
-            if MatrixNoFood[node_position[0]][node_position[0]] != 0:
-                if MatrixNoFood[node_position[0]][node_position[0]] == 4:
+            if MatrixNoFood[node_position[0]][node_position[1]] != 0:
+                if MatrixNoFood[node_position[0]][node_position[1]] == 4:
                     filledspaces += 7
+                    f.write("Head detected")
                 filledspaces += 1
         if filledspaces <= 1:
             path = astar(MatrixNoFood, start, end)
-        else:
-            path = "no result"
-        if path == "no result":
-            return "no path"
-        
-        if (len(path)) < bestFoodDistance:
-            bestFood = i
-            bestFoodDistance = len(path)
-            bestPath = path
+            if (len(path)) < bestFoodDistance:
+                bestFood = i
+                bestFoodDistance = len(path)
+                bestPath = path
+    
+    if bestPath == "no path":
+        return bestPath
     
     for j in range(len(bestPath)):
         tempRow = int((bestPath[j][0] - shift[0]) % numRows)
@@ -415,14 +414,21 @@ def agent(obs_dict, config_dict):
     
     #will replace player_row, player_column with 2d array that has all positions filled with all player information
     path = path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
+    
+    f.write("Path: " + str(path) + "\n")
+    
     if path == "no path":
         player_end = player_goose[len(player_goose)-1]
         player_end_row, player_end_column = row_col(player_end, configuration.columns)
-        path = astar(MatrixNoFood, start, (player_end_row, player_end_column))
+        if start == (player_end_row, player_end_column):
+            path = astar(MatrixNoFood, start, (player_end_row+3, player_end_column+5))
+        else:
+            path = astar(MatrixNoFood, start, (player_end_row, player_end_column))
+        
         f = open("./myfile1.txt", "a")
         f.write("Endless loop" + "\n")
     
-    f.write("\n")
+    f.write("\n" + "Path2: ")
     f.write(str(path))
     f.write("\n")
         
