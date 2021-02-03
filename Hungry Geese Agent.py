@@ -1,4 +1,4 @@
-%%writefile submission.py
+#%%writefile submission.py
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 import numpy as np
 import time
