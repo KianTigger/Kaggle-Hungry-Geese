@@ -1,4 +1,4 @@
-#%%writefile submission.py
+%%writefile submission.py
 from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Configuration, Action, row_col
 import numpy as np
 import time
@@ -45,6 +45,8 @@ numCols = 11
 numRows = 7
 Matrix = [[0 for x in range(numCols)] for y in range(numRows)]
 MatrixNoFood = [[0 for x in range(numCols)] for y in range(numRows)]
+MatrixHeadAvoid1 = [[0 for x in range(numCols)] for y in range(numRows)]
+MatrixHeadAvoid2 = [[0 for x in range(numCols)] for y in range(numRows)]
 
 def agent_ORIGINAL(obs_dict, config_dict):
     """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
@@ -76,6 +78,8 @@ def fill_matrix(observation, configuration):
     #7 = food
     Matrix = [[0 for x in range(numCols)] for y in range(numRows)]
     MatrixNoFood = [[0 for x in range(numCols)] for y in range(numRows)]
+    MatrixHeadAvoid1 = [[0 for x in range(numCols)] for y in range(numRows)]
+    MatrixHeadAvoid2 = [[0 for x in range(numCols)] for y in range(numRows)]
 
     foodPosition = 7
     player_index = observation.index
@@ -100,12 +104,31 @@ def fill_matrix(observation, configuration):
             if j == 0:
                 Matrix[player_row][player_column] = headPart
                 MatrixNoFood[player_row][player_column] = headPart
+                #
+                MatrixHeadAvoid1[player_row][player_column] = headPart
+                MatrixHeadAvoid2[player_row][player_column] = headPart
+                
+                if i != player_index:
+                    for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                        node_position = ((player_row + new_position[0])%numRows, (player_column + new_position[1])%numCols)
+                        if MatrixHeadAvoid1[node_position[0]][node_position[1]] == 0:
+                            MatrixHeadAvoid1[node_position[0]][node_position[1]] = 9
+                    for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+                        node_position = ((player_row + new_position[0])%numRows, (player_column + new_position[1])%numCols)
+                        if MatrixHeadAvoid2[node_position[0]][node_position[1]] == 0:
+                            MatrixHeadAvoid2[node_position[0]][node_position[1]] = 9
             elif j == len(player_goose)-1:
                 Matrix[player_row][player_column] = endPart
                 MatrixNoFood[player_row][player_column] = endPart
+                #
+                MatrixHeadAvoid1[player_row][player_column] = endPart
+                MatrixHeadAvoid2[player_row][player_column] = endPart
             else:
                 Matrix[player_row][player_column] = bodyPart
                 MatrixNoFood[player_row][player_column] = bodyPart
+                #
+                MatrixHeadAvoid1[player_row][player_column] = bodyPart
+                MatrixHeadAvoid2[player_row][player_column] = bodyPart
 
     #Food placement
     for i in range(len(observation.food)):
@@ -113,7 +136,7 @@ def fill_matrix(observation, configuration):
         tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
         Matrix[tempfood_row][tempfood_column] = foodPosition
     
-    return Matrix, MatrixNoFood
+    return Matrix, MatrixNoFood, MatrixHeadAvoid1, MatrixHeadAvoid2
     
 
 
@@ -153,7 +176,7 @@ def which_direction(path):
     f.write("Type of path: " + str(type(path)) + "\n")
     
     if type(path) != list:
-        f.write("SOMETHING WENT WRONG AND PATH GOT PASSED THROUGH EVEN THOUGH IT WAS STRING")
+        f.write("SOMETHING WENT WRONG AND PATH GOT PASSED THROUGH EVEN THOUGH IT WAS STRING " + "\n")
         return Action.NORTH.name
     try:
         movement = [0, 0]
@@ -181,7 +204,6 @@ def which_direction(path):
         return Action.EAST.name
     elif movement == [0, -10]:
         return Action.WEST.name
-    
 
 
 
@@ -191,7 +213,7 @@ def min_distance_dircular_dist(lenList, index1, index2):
     return minDistance
 
 #for A* algorithm puts goose head in middle  so shortest path is best for circular grid.
-def shift_matrix(TempMatrix, start):
+def shift_matrix(TempMatrixList, start):
     #Middle position for 11*7 grid is 5, 3
     #start = (player_row, player_column)
 
@@ -199,22 +221,23 @@ def shift_matrix(TempMatrix, start):
     stepsUp = ((start[0] + 3 + 1 ) % 7 )
     stepsRight = (start[1] - 5 ) * - 1
 
-    #this code is garbage but I can't think of a good way and np.roll doesn't work for 2d arrays.
-    for i in range(stepsUp):
-        tempRow = TempMatrix[0]
-        for j in range(numRows-1):
-            TempMatrix[j] = TempMatrix[j+1]
-        TempMatrix[numRows-1] = tempRow
-    
-    for j in range(len(TempMatrix)):
-        TempMatrix[j] = np.roll(TempMatrix[j], stepsRight)
-    #TempMatrix = np.roll(TempMatrix, stepsRight)
+    for TempMatrix in TempMatrixList:
+        #this code is garbage but I can't think of a good way and np.roll doesn't work for 2d arrays.
+        for i in range(stepsUp):
+            tempRow = TempMatrix[0]
+            for j in range(numRows-1):
+                TempMatrix[j] = TempMatrix[j+1]
+            TempMatrix[numRows-1] = tempRow
+
+        for j in range(len(TempMatrix)):
+            TempMatrix[j] = np.roll(TempMatrix[j], stepsRight)
+        #TempMatrix = np.roll(TempMatrix, stepsRight)
 
     newStart = (3, 5)
 
     shift = [newStart[0]-start[0],newStart[1]-start[1]]
 
-    return TempMatrix, newStart, shift
+    return TempMatrixList, newStart, shift
 
 
 
@@ -269,7 +292,7 @@ def astar(maze, start, end):
     # Loop until you find the end
     count = 0
     while len(open_list) > 0:
-        if count >= 15:
+        if count >= 100:
             return "no path"
         count += 1
         f.write("Count: " + str(count) + ", Open_list[0]: " + str(open_list[0]))
@@ -337,45 +360,58 @@ def astar(maze, start, end):
 
             # Add the child to the open list
             open_list.append(child)
+    return "no path"
 
-def path_to_closest_food(observation, configuration, MatrixNoFood, start, shift):
+def path_to_closest_food(observation, configuration, MatrixsToUse, start, shift):
     #instead of using obeservation.food[0] should find out which food has shortest route from head.
     
     bestFood = 0
     bestFoodDistance = numCols + numRows
     bestPath = "no path"
+    f = open("./myfile1.txt", "a")
+    for MatrixToUse in MatrixsToUse:
+        
+        if bestPath != "no path":
+            f.write("\n")
+            f.write("Current MatrixToUse: " + str(MatrixToUse))
+            f.write("\n")
+            continue
+            
+        for i in range(len(observation.food)):
+            
+            f.write(str(observation.food) + " <-- num foods, ")
+            f.write("iteration of path to closest food: " + str(i))
+            f.write("\n")
+            tempfood = observation.food[i]
 
-    for i in range(len(observation.food)):
-        f = open("./myfile1.txt", "a")
-        f.write(str(observation.food) + " <-- num foods, ")
-        f.write("iteration of path to closest food: " + str(i))
-        f.write("\n")
-        tempfood = observation.food[i]
-        
-        tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
-        end = (tempfood_row, tempfood_column)
-        tempRow = int((end[0] + shift[0]) % numRows)
-        tempCol = (end[1] + shift[1]) % numCols
-        end = (tempRow, tempCol)
-        
-        filledspaces = 0
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_position = ((end[0] + new_position[0])%6, (end[1] + new_position[1])%10)
-            if MatrixNoFood[node_position[0]][node_position[1]] != 0:
-                if MatrixNoFood[node_position[0]][node_position[1]] == 4:
-                    filledspaces += 7
-                    f.write("Head detected")
-                filledspaces += 1
-        if filledspaces <= 1:
-            path = astar(MatrixNoFood, start, end)
-            if (len(path)) < bestFoodDistance:
-                bestFood = i
-                bestFoodDistance = len(path)
-                bestPath = path
+            tempfood_row, tempfood_column = row_col(tempfood, configuration.columns)
+            end = (tempfood_row, tempfood_column)
+            tempRow = int((end[0] + shift[0]) % numRows)
+            tempCol = (end[1] + shift[1]) % numCols
+            end = (tempRow, tempCol)
+            f.write("Start coords2 " + str(start) + "\n" + "End coords2 " + str(end) + "\n")
+            filledspaces = 0
+            for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                node_position = ((end[0] + new_position[0])%6, (end[1] + new_position[1])%10)
+                if MatrixToUse[node_position[0]][node_position[1]] != 0:
+                    if MatrixToUse[node_position[0]][node_position[1]] == 4:
+                        filledspaces += 7
+                        f.write("Head detected")
+                    filledspaces += 1
+            if filledspaces <= 1:
+                path = astar(MatrixToUse, start, end)
+                try:
+                    if (len(path)) < bestFoodDistance:
+                        bestFood = i
+                        bestFoodDistance = len(path)
+                        bestPath = path
+                except TypeError:
+                    path = "no path"
+
     
     if bestPath == "no path":
         return bestPath
-    
+
     for j in range(len(bestPath)):
         tempRow = int((bestPath[j][0] - shift[0]) % numRows)
         tempCol = int((bestPath[j][1] - shift[1]) % numCols)
@@ -398,18 +434,11 @@ def agent(obs_dict, config_dict):
     
     t0= time.clock()
     f = open("./myfile1.txt", "a")
-    f.write("Commencing turn: " + str(which_turn))
-    
     f.write("\n")
     f.write("Starting file" + "\n")
-    """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
+    
     observation = Observation(obs_dict)
     configuration = Configuration(config_dict)
-
-    Matrix, MatrixNoFood = fill_matrix(observation, configuration)
-    
-    f.write("Matrix filled" + "\n")
-    
     player_index = observation.index
     player_goose = observation.geese[player_index]
     #player_goose is list of all bodypart positions
@@ -417,32 +446,54 @@ def agent(obs_dict, config_dict):
     player_row, player_column = row_col(player_head, configuration.columns)
     start = (player_row, player_column)
     
-    MatrixNoFood, start, shift = shift_matrix(MatrixNoFood, start)
+    
+    f.write("Commencing turn: " + str(which_turn))
+    with open('./myfile2.txt', 'a') as testfile:
+        testfile.write("Player_index: " + str(player_index) + " [0: White, 1: Blue, 2: Green, 3: Red], " + "\n")
+    f.write("Player_index: " + str(player_index) + " [0: White, 1: Blue, 2: Green, 3: Red], " + "\n")
+    """This agent always moves toward observation.food[0] but does not take advantage of board wrapping"""
+    
+
+    Matrix, MatrixNoFood, MatrixHeadAvoid1, MatrixHeadAvoid2 = fill_matrix(observation, configuration)
+    
+    f.write("Matrix filled" + "\n")
+    
+    
+    
+    
+    
+    [MatrixNoFood, MatrixHeadAvoid1, MatrixHeadAvoid2], start, shift = shift_matrix([MatrixNoFood, MatrixHeadAvoid1, MatrixHeadAvoid2], start)
     f.write("Matrix shifted" + "\n")
     f.write("Start coords " + str(start) + "\n")
 
     
     
+    
+    #MatrixToUse = MatrixNoFood
+    #MatrixToUse = MatrixHeadAvoid2
+    #MatrixToUse = MatrixHeadAvoid1
+    #MatrixBackup1 = MatrixHeadAvoid1
+    #MatrixBackup2 = MatrixNoFood
+    
+    #MatrixsToUse = [MatrixHeadAvoid2, MatrixHeadAvoid1, MatrixNoFood]
+    
+    MatrixsToUse = [MatrixHeadAvoid1, MatrixNoFood]
+    
+    
     #will replace player_row, player_column with 2d array that has all positions filled with all player information
-    path = path_to_closest_food(observation, configuration, MatrixNoFood, start, shift)
-    
-    f.write("Path: " + str(path) + "\n")
-    
-    if type(path) != list:
+    path = path_to_closest_food(observation, configuration, MatrixsToUse, start, shift)
+    if path == "no path":
+        player_index = observation.index
+        player_goose = observation.geese[player_index]
         player_end = player_goose[len(player_goose)-1]
         player_end_row, player_end_column = row_col(player_end, configuration.columns)
-        if start == (player_end_row, player_end_column):
-            path = astar(MatrixNoFood, start, (player_end_row+3, player_end_column+5))
-        else:
-            path = astar(MatrixNoFood, start, (player_end_row, player_end_column))
-        
-        f = open("./myfile1.txt", "a")
-        f.write("Endless loop" + "\n")
-    
-    f.write("\n" + "Path2: ")
-    f.write(str(path))
-    f.write("\n")
-        
+        for MatrixToUse in MatrixsToUse:
+            if path == "no path":
+                if start == (player_end_row, player_end_column):
+                    path = astar(MatrixToUse, start, (player_end_row+3, player_end_column+5))
+                else:
+                    path = astar(MatrixToUse, start, (player_end_row, player_end_column))
+    f.write("Path: " + str(path) + "\n")
         
     whichMove =  which_direction(path)
     
